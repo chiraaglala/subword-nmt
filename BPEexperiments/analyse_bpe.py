@@ -1,33 +1,60 @@
+#Adapted from Josiah Wang's script
+
 import numpy as np
+import operator
 
-inFolder = '/home/multimt/datasets/wmt17_mmt/task1/train/';
+inFolder = '../../../datasets/wmt17_mmt/task1/train/BPEsegmentedCorpus/'
 
-#counts = [5000, 10000, 15000, 20000];
-counts = [1000, 2000, 3000, 4000, 4500, 5000, 6000, 7000, 8000, 9000, 10000, 15000, 20000, 30000];
+counts = [3000, 6000, 9000, 12000, 15000, 18000, 21000, 24000, 27000, 30000]
 
-srcLang = "en";
-trgLang = "de";
+srcLang = "en"
+trgLang = "de"
 
-filename = 'train.tok.bpe-{}{}-{}.{}';
+filename = '{}{}.{}.{}'
 
 for count in counts:
-    freq = {}
+    bytefreq = {}
+    originalfreq = {}
+    continuer = 0
     for lang in [srcLang, trgLang]:
-        newfilename = filename.format(srcLang, trgLang, count, lang);
-        for line in open(inFolder + newfilename, encoding='utf-8'):
-            row = line.strip().split();
+        newfilename = filename.format(srcLang, trgLang, count, lang)
+        for line in open(inFolder + newfilename):
+            row = line.strip().split()
             for token in row:
-                if '@' in token:
-                    freq[token] = freq.get(token, 0) + 1;
+		if continuer==0:
+		    if '@@' in token:
+                	bytefreq[token] = bytefreq.get(token, 0) + 1
+			continuer=1
+			orig = token
+		else:
+		    if '@@' in token:
+			bytefreq[token] = bytefreq.get(token, 0) + 1
+			continuer=1
+			orig = orig+token
+		    else:
+			bytefreq[token] = bytefreq.get(token, 0) + 1
+			continuer=0
+			orig = orig+token
+			originalfreq[orig] = originalfreq.get(orig, 0) + 1
+			orig = None
+	    
+    sorted_bytefreq = sorted(bytefreq.items(), key=operator.itemgetter(1))
+    sorted_originalfreq = sorted(originalfreq.items(), key=operator.itemgetter(1))
 
-        '''
-    dist = {};
-    # generate distribution of token freq
-    for (token, f) in freq.items():
-        dist[f] = dist.get(f, 0) + 1;
-        '''
-
-    (hist, bins) = np.histogram(list(freq.values()), range(1, max(list(freq.values()))+1));
+#    (hist, bins) = np.histogram(list(freq.values()), range(1, max(list(freq.values()))+1));
     print("BPE Merge Operations: {}".format(count));
-    print(hist[:100]);
-    print();
+    print sorted_bytefreq[:100]
+    print '\n\n'
+    print sorted_originalfreq[:100]
+    print '\n====================================\n'
+#    print();
+
+
+    (hist, bins) = np.histogram(list(bytefreq.values()), range(1, max(list(bytefreq.values()))+1));
+    print("Histogram of bytes")
+    print(hist[:100])
+
+
+    (hist, bins) = np.histogram(list(originalfreq.values()), range(1, max(list(originalfreq.values()))+1));
+    print("Histogram of originals")
+    print(hist)
